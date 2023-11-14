@@ -32,7 +32,7 @@ void THCPGraph_init(PyObject* module) {
       .def_readonly("wholegraph_increment_", &at::cuda::CUDAGraph::wholegraph_increment_)
       .def_readonly("seed_extragraph_", &at::cuda::CUDAGraph::seed_extragraph_)
       .def_readonly("offset_extragraph_", &at::cuda::CUDAGraph::offset_extragraph_)
-      .def_readonly("graph_exec_", &at::cuda::CUDAGraph::graph_exec_)
+      .def("get_graph_exec_", [](const ::at::cuda::CUDAGraph& self) -> void* { return (void*) self.graph_exec_; })
       .def(
           "capture_begin",
           [](::at::cuda::CUDAGraph& self,
