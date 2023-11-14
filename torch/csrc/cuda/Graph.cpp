@@ -27,6 +27,7 @@ void THCPGraph_init(PyObject* module) {
 
   shared_ptr_class_<::at::cuda::CUDAGraph>(torch_C_m, "_CUDAGraph")
       .def(py::init<>())
+      .def_readonly("has_graph_exec_", &at::cuda::CUDAGraph::has_graph_exec_)
       .def(
           "capture_begin",
           [](::at::cuda::CUDAGraph& self,
