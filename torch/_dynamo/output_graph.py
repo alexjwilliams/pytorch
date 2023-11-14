@@ -28,6 +28,7 @@ from torch._guards import (
     Source,
     TracingContext,
 )
+from torch._subclasses.fake_tensor import FakeTensorMode
 from torch._utils_internal import signpost_event
 from torch.fx.experimental.symbolic_shapes import free_symbols, is_symbolic, ShapeEnv
 from torch.utils.weak import WeakTensorKeyDictionary
@@ -278,12 +279,17 @@ class OutputGraph(Checkpointable[OutputGraphState]):
 
         # In export mode, we force the shape_env to strictly disallow any constraining
         # of the user marked dynamic dims
-        fake_mode = torch._subclasses.FakeTensorMode(
+        self.immutable_fake_mode = torch._subclasses.FakeTensorMode(
             shape_env=shape_env,
             # TODO (tmanlaibaatar) Remove this once we always lift params and buffers
             allow_non_fake_inputs=True if self.export else False,
         )
-        self.tracing_context: TracingContext = TracingContext(fake_mode)
+        self.mutable_fake_mode = torch._subclasses.FakeTensorMode(
+            shape_env=shape_env,
+            allow_non_fake_inputs=True if self.export else False,
+            parent=self.immutable_fake_mode,
+        )
+        self.tracing_context: TracingContext = TracingContext(self.mutable_fake_mode)
         self.init_ambient_guards()
 
         # Map each tensor id to a list of sources. This is necessary because
@@ -1020,7 +1026,20 @@ class OutputGraph(Checkpointable[OutputGraphState]):
             "%s", LazyString(lambda: self.get_graph_sizes_log_str(name))
         )
         self.call_cleanup_hooks()
-        with self.restore_global_state():
+        parent_fake_mode = self.immutable_fake_mode
+        backend_fake_mode = FakeTensorMode(
+            shape_env=parent_fake_mode.shape_env,
+            parent=parent_fake_mode,
+        )
+        # Dynamo maintains two fake modes - an immutable fake mode which acts as the "parent"
+        # fake mode and is the source of truth for initial memoizations. We can dynamically
+        # swap fake modes as needed, so that the fake mode use by backends is "fresh".
+        # A fresh fake mode means fresh fake tensors, which, for backends ensures that
+        # tensors match their original metadata at the start of trace, as opposed to their metadata
+        # at the end of trace.
+        with self.restore_global_state(), self.tracing_context.with_fake_mode(
+            backend_fake_mode
+        ):
             compiled_fn = self.call_user_compiler(gm)
         compiled_fn = disable(compiled_fn)
 
