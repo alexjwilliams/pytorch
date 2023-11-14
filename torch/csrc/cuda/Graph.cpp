@@ -28,6 +28,11 @@ void THCPGraph_init(PyObject* module) {
   shared_ptr_class_<::at::cuda::CUDAGraph>(torch_C_m, "_CUDAGraph")
       .def(py::init<>())
       .def_readonly("has_graph_exec_", &at::cuda::CUDAGraph::has_graph_exec_)
+      .def_readonly("capture_stream_", &at::cuda::CUDAGraph::capture_stream_)
+      .def_readonly("wholegraph_increment_", &at::cuda::CUDAGraph::wholegraph_increment_)
+      .def_readonly("seed_extragraph_", &at::cuda::CUDAGraph::seed_extragraph_)
+      .def_readonly("offset_extragraph_", &at::cuda::CUDAGraph::offset_extragraph_)
+      .def_readonly("graph_exec_", &at::cuda::CUDAGraph::graph_exec_)
       .def(
           "capture_begin",
           [](::at::cuda::CUDAGraph& self,
