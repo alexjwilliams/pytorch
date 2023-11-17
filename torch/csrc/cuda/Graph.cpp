@@ -27,6 +27,7 @@ void THCPGraph_init(PyObject* module) {
 
   shared_ptr_class_<::at::cuda::CUDAGraph>(torch_C_m, "_CUDAGraph")
       .def(py::init<>())
+      .def("get_reference", [](at::cuda::CUDAGraph& self) -> at::cuda::CUDAGraph& { return self; }, py::return_value_policy::reference)
       .def_readonly("has_graph_exec_", &at::cuda::CUDAGraph::has_graph_exec_)
       .def("get_capture_stream_", [](const ::at::cuda::CUDAGraph& self) -> void* { return (void*) self.capture_stream_.stream(); })
       .def_readonly("wholegraph_increment_", &at::cuda::CUDAGraph::wholegraph_increment_)
